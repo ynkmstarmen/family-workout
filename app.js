@@ -22,6 +22,14 @@ function shuffle(a) {
   return a;
 }
 
+// 图片加载失败自动重试一次（CDN 偶发超时）
+function imgRetry(el) {
+  if (el.dataset.retried) return;
+  el.dataset.retried = "1";
+  const src = el.src;
+  setTimeout(() => { el.src = src + (src.includes("?") ? "&" : "?") + "r=1"; }, 800);
+}
+
 // HTML 转义（防用户名输入注入）
 function esc(s) {
   return String(s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -100,7 +108,7 @@ function exCard(ex, level, idx) {
   return `
   <div class="card">
     <div class="card-head">
-      <img src="${ex.gif}" alt="${ex.zh}" loading="lazy">
+      <img src="${ex.gif}" alt="${ex.zh}" loading="lazy" onerror="imgRetry(this)">
       <div class="card-title">
         <div class="idx">${idx}</div>
         <h3>${ex.zh}</h3>
@@ -154,7 +162,7 @@ function aiCard(ex, idx) {
   return `
   <div class="card">
     <div class="card-head">
-      <img src="${ex.gif}" alt="${ex.zh}" loading="lazy">
+      <img src="${ex.gif}" alt="${ex.zh}" loading="lazy" onerror="imgRetry(this)">
       <div class="card-title">
         <div class="idx">${idx}</div>
         <h3>${ex.zh}</h3>
