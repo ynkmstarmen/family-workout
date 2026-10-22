@@ -22,6 +22,11 @@ function shuffle(a) {
   return a;
 }
 
+// HTML 转义（防用户名输入注入）
+function esc(s) {
+  return String(s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
 function getForm() {
   const goals = [...document.querySelectorAll('input[name=goal]:checked')].map(e => e.value);
   const level = document.querySelector('input[name=intensity]:checked').value; // easy|normal|hard
@@ -118,7 +123,6 @@ function renderPlan(p) {
       <p>目标：${f.goals.join("、")} ｜ 强度：${levelCn} ｜ 时长：约${f.minutes}分钟 ｜ 偏好：${prefCn}</p>
       <p class="tip">💡 防肌肉流失关键：每周练 3 次以上 + 保证蛋白质（每天每公斤体重 1.2g 左右）+ 动作宁慢勿快</p>
       <div class="plan-actions">
-        <button onclick="window.print()">🖨️ 打印计划</button>
         <button onclick="copyShare()">🔗 复制分享（链接+密码）</button>
         <button onclick="regenerate()">🔄 换一套动作</button>
       </div>
@@ -144,6 +148,139 @@ function copyShare() {
   );
 }
 
+// ===== AI 定制计划 =====
+function aiCard(ex, idx) {
+  const steps = (ex.steps || []).map(s => `<li>${s}</li>`).join("");
+  return `
+  <div class="card">
+    <div class="card-head">
+      <img src="${ex.gif}" alt="${ex.zh}" loading="lazy">
+      <div class="card-title">
+        <div class="idx">${idx}</div>
+        <h3>${ex.zh}</h3>
+        <div class="meta">目标:${ex.target || ""}</div>
+        <div class="dose">${ex.dose || ""}</div>
+      </div>
+    </div>
+    ${steps ? `<details><summary>动作步骤</summary><ol>${steps}</ol></details>` : ""}
+  </div>`;
+}
+
+// 当前展示的 AI 计划（用于保存）
+let currentAiPlan = null;
+
+function renderAiPlan(plan) {
+  currentAiPlan = plan;
+  let html = `
+    <div class="plan-head">
+      <h2>🤖 ${esc(plan.title) || "AI 定制锻炼计划"}</h2>
+      ${plan.notes ? `<p class="tip">💡 ${esc(plan.notes)}</p>` : ""}
+      <div class="plan-actions">
+        <button onclick="copyShare()">🔗 复制分享（链接+密码）</button>
+      </div>
+      <div class="save-row">
+        <input id="plan-name" placeholder="给这个计划取个名字，如：爸爸的护膝计划" maxlength="30">
+        <button onclick="saveCurrentPlan()">💾 取名保存</button>
+      </div>
+    </div>
+    ${plan.warmup && plan.warmup.length ? `<h3 class="section">🔥 热身</h3>` + plan.warmup.map((e, i) => aiCard(e, "热身" + (i + 1))).join("") : ""}
+    <h3 class="section">💪 主训练</h3>
+    ${(plan.main || []).map((e, i) => aiCard(e, i + 1)).join("")}
+    ${plan.cooldown && plan.cooldown.length ? `<h3 class="section">🧘 放松拉伸</h3>` + plan.cooldown.map((e, i) => aiCard(e, "放松" + (i + 1))).join("") : ""}
+  `;
+  document.getElementById("plan").innerHTML = html;
+  document.getElementById("plan").scrollIntoView({ behavior: "smooth" });
+}
+
+async function aiGenerate() {
+  const demand = document.getElementById("ai-demand").value.trim();
+  const st = document.getElementById("ai-status");
+  if (demand.length < 4) { st.textContent = "请多写几个字，说说你的情况。"; return; }
+  st.textContent = "⏳ 正在联网搜索最优动作并定制计划，请稍候…";
+  document.getElementById("ai-gen").disabled = true;
+  try {
+    const r = await fetch("/api/ai-plan", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ demand }),
+    });
+    const plan = await r.json();
+    if (!r.ok) throw new Error(plan.error || "生成失败");
+    renderAiPlan(plan);
+    st.textContent = "";
+  } catch (e) {
+    st.textContent = "❌ " + e.message;
+  } finally {
+    document.getElementById("ai-gen").disabled = false;
+  }
+}
+
+// ===== 保存的计划（本机 localStorage）=====
+const PLANS_KEY = "workout_plans_v1";
+
+function getSavedPlans() {
+  try { return JSON.parse(localStorage.getItem(PLANS_KEY) || "[]"); }
+  catch (e) { return []; }
+}
+
+function setSavedPlans(list) {
+  localStorage.setItem(PLANS_KEY, JSON.stringify(list));
+}
+
+function saveCurrentPlan() {
+  if (!currentAiPlan) { alert("还没有生成计划，先点「AI 生成我的计划」。"); return; }
+  const nameEl = document.getElementById("plan-name");
+  const name = (nameEl.value || "").trim();
+  if (!name) { alert("请先给计划取个名字。"); nameEl.focus(); return; }
+  const list = getSavedPlans();
+  list.unshift({
+    id: Date.now(),
+    name: name,
+    createdAt: new Date().toLocaleString("zh-CN", { hour12: false }),
+    plan: currentAiPlan,
+  });
+  setSavedPlans(list);
+  alert(`已保存「${name}」到本机。`);
+  renderSavedPlans();
+}
+
+function renderSavedPlans() {
+  const el = document.getElementById("saved-plans");
+  if (!el) return;
+  const list = getSavedPlans();
+  if (!list.length) { el.innerHTML = ""; return; }
+  el.innerHTML = `
+    <div class="panel">
+      <h2>📁 我保存的计划（本机）</h2>
+      ${list.map(p => `
+        <div class="saved-item">
+          <div class="saved-info">
+            <div class="saved-name">${esc(p.name)}</div>
+            <div class="saved-time">${esc(p.createdAt)} · ${(p.plan.main || []).length} 个主动作</div>
+          </div>
+          <div class="saved-btns">
+            <button onclick="loadPlan(${p.id})">打开</button>
+            <button onclick="deletePlan(${p.id})" class="danger">删除</button>
+          </div>
+        </div>`).join("")}
+    </div>`;
+}
+
+function loadPlan(id) {
+  const p = getSavedPlans().find(x => x.id === id);
+  if (!p || !p.plan) { alert("计划找不到了，可能已被删除。"); renderSavedPlans(); return; }
+  renderAiPlan(p.plan);
+  const nameEl = document.getElementById("plan-name");
+  if (nameEl) nameEl.value = p.name;
+}
+
+function deletePlan(id) {
+  const p = getSavedPlans().find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`确定删除「${p.name}」吗？`)) return;
+  setSavedPlans(getSavedPlans().filter(x => x.id !== id));
+  renderSavedPlans();
+}
+
 // ===== 登录门 =====
 function tryLogin() {
   const v = document.getElementById("pwd").value;
@@ -157,9 +294,11 @@ function tryLogin() {
 function showApp() {
   document.getElementById("login").style.display = "none";
   document.getElementById("app").style.display = "block";
+  renderSavedPlans();
 }
 window.addEventListener("DOMContentLoaded", () => {
   if (sessionStorage.getItem("workout_auth") === "1") showApp();
   document.getElementById("pwd").addEventListener("keydown", e => { if (e.key === "Enter") tryLogin(); });
   document.getElementById("gen").addEventListener("click", () => renderPlan(generatePlan()));
+  document.getElementById("ai-gen").addEventListener("click", aiGenerate);
 });
