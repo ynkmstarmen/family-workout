@@ -22,17 +22,17 @@ function shuffle(a) {
   return a;
 }
 
+// HTML 转义（防用户名输入注入）
+function esc(s) {
+  return String(s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
 // 图片加载失败自动重试一次（CDN 偶发超时）
 function imgRetry(el) {
   if (el.dataset.retried) return;
   el.dataset.retried = "1";
   const src = el.src;
   setTimeout(() => { el.src = src + (src.includes("?") ? "&" : "?") + "r=1"; }, 800);
-}
-
-// HTML 转义（防用户名输入注入）
-function esc(s) {
-  return String(s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
 
 function getForm() {
@@ -149,9 +149,9 @@ function renderPlan(p) {
 function regenerate() { renderPlan(generatePlan()); }
 
 function copyShare() {
-  const text = `家庭锻炼计划工具：${location.origin}${location.pathname}\n登录密码：${SITE_PASSWORD}`;
+  const text = `家庭锻炼计划工具：${location.origin}${location.pathname}\n（登录密码找分享人要）`;
   navigator.clipboard.writeText(text).then(
-    () => alert("已复制！把链接和密码发给家人朋友即可。"),
+    () => alert("已复制！把链接发给家人朋友，密码另行告诉他们。"),
     () => prompt("复制失败，请手动复制：", text)
   );
 }
@@ -209,7 +209,7 @@ async function aiGenerate() {
   try {
     const r = await fetch("/api/ai-plan", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ demand }),
+      body: JSON.stringify({ demand, token: sessionStorage.getItem("workout_auth") }),
     });
     const plan = await r.json();
     if (!r.ok) throw new Error(plan.error || "生成失败");
@@ -289,14 +289,22 @@ function deletePlan(id) {
   renderSavedPlans();
 }
 
-// ===== 登录门 =====
-function tryLogin() {
+// ===== 登录门（服务端校验，密码不在前端出现） =====
+async function tryLogin() {
   const v = document.getElementById("pwd").value;
-  if (v === SITE_PASSWORD) {
-    sessionStorage.setItem("workout_auth", "1");
+  const errEl = document.getElementById("login-err");
+  errEl.textContent = "验证中…";
+  try {
+    const r = await fetch("/api/login", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: v }),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || "登录失败");
+    sessionStorage.setItem("workout_auth", j.token);
     showApp();
-  } else {
-    document.getElementById("login-err").textContent = "密码不对，再试试。";
+  } catch (e) {
+    errEl.textContent = e.message;
   }
 }
 function showApp() {
@@ -305,7 +313,7 @@ function showApp() {
   renderSavedPlans();
 }
 window.addEventListener("DOMContentLoaded", () => {
-  if (sessionStorage.getItem("workout_auth") === "1") showApp();
+  if (sessionStorage.getItem("workout_auth")) showApp();
   document.getElementById("pwd").addEventListener("keydown", e => { if (e.key === "Enter") tryLogin(); });
   document.getElementById("gen").addEventListener("click", () => renderPlan(generatePlan()));
   document.getElementById("ai-gen").addEventListener("click", aiGenerate);
