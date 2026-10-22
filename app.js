@@ -222,48 +222,53 @@ async function aiGenerate() {
   }
 }
 
-// ===== 保存的计划（本机 localStorage）=====
-const PLANS_KEY = "workout_plans_v1";
+// ===== 保存的计划（云端同步，全设备通用）=====
+function authToken() { return sessionStorage.getItem("workout_auth"); }
 
-function getSavedPlans() {
-  try { return JSON.parse(localStorage.getItem(PLANS_KEY) || "[]"); }
-  catch (e) { return []; }
+function fmtTime(v) {
+  try { return new Date(v).toLocaleString("zh-CN", { hour12: false }); }
+  catch (e) { return v || ""; }
 }
 
-function setSavedPlans(list) {
-  localStorage.setItem(PLANS_KEY, JSON.stringify(list));
+async function getSavedPlans() {
+  try {
+    const r = await fetch("/api/plans?token=" + encodeURIComponent(authToken()));
+    if (!r.ok) return [];
+    const j = await r.json();
+    return j.plans || [];
+  } catch (e) { return []; }
 }
 
-function saveCurrentPlan() {
+async function saveCurrentPlan() {
   if (!currentAiPlan) { alert("还没有生成计划，先点「AI 生成我的计划」。"); return; }
   const nameEl = document.getElementById("plan-name");
   const name = (nameEl.value || "").trim();
   if (!name) { alert("请先给计划取个名字。"); nameEl.focus(); return; }
-  const list = getSavedPlans();
-  list.unshift({
-    id: Date.now(),
-    name: name,
-    createdAt: new Date().toLocaleString("zh-CN", { hour12: false }),
-    plan: currentAiPlan,
-  });
-  setSavedPlans(list);
-  alert(`已保存「${name}」到本机。`);
-  renderSavedPlans();
+  try {
+    const r = await fetch("/api/plans", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, plan: currentAiPlan, token: authToken() }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { alert("保存失败：" + (j.error || "请稍后重试")); return; }
+    alert(`已保存「${name}」到云端，手机电脑都能看。`);
+    renderSavedPlans();
+  } catch (e) { alert("保存失败：网络不通，请稍后重试。"); }
 }
 
-function renderSavedPlans() {
+async function renderSavedPlans() {
   const el = document.getElementById("saved-plans");
   if (!el) return;
-  const list = getSavedPlans();
+  const list = await getSavedPlans();
   if (!list.length) { el.innerHTML = ""; return; }
   el.innerHTML = `
     <div class="panel">
-      <h2>📁 我保存的计划（本机）</h2>
+      <h2>📁 我保存的计划（云端同步）</h2>
       ${list.map(p => `
         <div class="saved-item">
           <div class="saved-info">
             <div class="saved-name">${esc(p.name)}</div>
-            <div class="saved-time">${esc(p.createdAt)} · ${(p.plan.main || []).length} 个主动作</div>
+            <div class="saved-time">${esc(fmtTime(p.createdAt))} · ${(p.plan.main || []).length} 个主动作</div>
           </div>
           <div class="saved-btns">
             <button onclick="loadPlan(${p.id})">打开</button>
@@ -273,20 +278,46 @@ function renderSavedPlans() {
     </div>`;
 }
 
-function loadPlan(id) {
-  const p = getSavedPlans().find(x => x.id === id);
+async function loadPlan(id) {
+  const list = await getSavedPlans();
+  const p = list.find(x => x.id === Number(id));
   if (!p || !p.plan) { alert("计划找不到了，可能已被删除。"); renderSavedPlans(); return; }
   renderAiPlan(p.plan);
   const nameEl = document.getElementById("plan-name");
   if (nameEl) nameEl.value = p.name;
 }
 
-function deletePlan(id) {
-  const p = getSavedPlans().find(x => x.id === id);
+async function deletePlan(id) {
+  const list = await getSavedPlans();
+  const p = list.find(x => x.id === Number(id));
   if (!p) return;
-  if (!confirm(`确定删除「${p.name}」吗？`)) return;
-  setSavedPlans(getSavedPlans().filter(x => x.id !== id));
-  renderSavedPlans();
+  if (!confirm(`确定删除「${p.name}」吗？全家设备上都会删掉。`)) return;
+  try {
+    const r = await fetch("/api/plans", {
+      method: "DELETE", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, token: authToken() }),
+    });
+    if (!r.ok) { const j = await r.json().catch(() => ({})); alert("删除失败：" + (j.error || "")); return; }
+    renderSavedPlans();
+  } catch (e) { alert("删除失败：网络不通。"); }
+}
+
+// 一次性迁移：把之前存在本机的计划搬到云端
+async function migrateLocalPlans() {
+  if (localStorage.getItem("workout_plans_migrated")) return;
+  let local = [];
+  try { local = JSON.parse(localStorage.getItem("workout_plans_v1") || "[]"); } catch (e) {}
+  if (!local.length) { localStorage.setItem("workout_plans_migrated", "1"); return; }
+  for (const p of local) {
+    try {
+      await fetch("/api/plans", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: p.name, plan: p.plan, createdAt: p.createdAt, token: authToken() }),
+      });
+    } catch (e) {}
+  }
+  localStorage.setItem("workout_plans_migrated", "1");
+  localStorage.removeItem("workout_plans_v1");
 }
 
 // ===== 登录门（服务端校验，密码不在前端出现） =====
@@ -310,7 +341,7 @@ async function tryLogin() {
 function showApp() {
   document.getElementById("login").style.display = "none";
   document.getElementById("app").style.display = "block";
-  renderSavedPlans();
+  migrateLocalPlans().then(renderSavedPlans);
 }
 window.addEventListener("DOMContentLoaded", () => {
   if (sessionStorage.getItem("workout_auth")) showApp();
