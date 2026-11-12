@@ -127,19 +127,19 @@ function renderPlan(p) {
   const prefCn = f.pref === "static" ? "静态为主" : f.pref === "dynamic" ? "动态为主" : "动静结合";
   let html = `
     <div class="plan-head">
-      <h2>🏋️ 你的锻炼计划</h2>
+      <h2>你的锻炼计划</h2>
       <p>目标：${f.goals.join("、")} ｜ 强度：${levelCn} ｜ 时长：约${f.minutes}分钟 ｜ 偏好：${prefCn}</p>
-      <p class="tip">💡 防肌肉流失关键：每周练 3 次以上 + 保证蛋白质（每天每公斤体重 1.2g 左右）+ 动作宁慢勿快</p>
+      <p class="tip">防肌肉流失关键：每周练 3 次以上 + 保证蛋白质（每天每公斤体重 1.2g 左右）+ 动作宁慢勿快</p>
       <div class="plan-actions">
-        <button onclick="copyShare()">🔗 复制分享（链接+密码）</button>
-        <button onclick="regenerate()">🔄 换一套动作</button>
+        <button onclick="copyShare()">复制分享（链接+密码）</button>
+        <button onclick="regenerate()">换一套动作</button>
       </div>
     </div>
-    <h3 class="section">🔥 热身（每个 30 秒）</h3>
+    <h3 class="section">热身（每个 30 秒）</h3>
     ${p.warmup.map((e, i) => exCard(e, f.level, "热身" + (i + 1))).join("")}
-    <h3 class="section">💪 主训练</h3>
+    <h3 class="section">主训练</h3>
     ${p.main.map((e, i) => exCard(e, f.level, i + 1)).join("")}
-    <h3 class="section">🧘 放松拉伸（每个 30 秒）</h3>
+    <h3 class="section">放松拉伸（每个 30 秒）</h3>
     ${p.cooldown.map((e, i) => exCard(e, f.level, "放松" + (i + 1))).join("")}
   `;
   document.getElementById("plan").innerHTML = html;
@@ -181,20 +181,20 @@ function renderAiPlan(plan) {
   currentAiPlan = plan;
   let html = `
     <div class="plan-head">
-      <h2>🤖 ${esc(plan.title) || "AI 定制锻炼计划"}</h2>
-      ${plan.notes ? `<p class="tip">💡 ${esc(plan.notes)}</p>` : ""}
+      <h2>${esc(plan.title) || "AI 定制锻炼计划"}</h2>
+      ${plan.notes ? `<p class="tip">${esc(plan.notes)}</p>` : ""}
       <div class="plan-actions">
-        <button onclick="copyShare()">🔗 复制分享（链接+密码）</button>
+        <button onclick="copyShare()">复制分享（链接+密码）</button>
       </div>
       <div class="save-row">
         <input id="plan-name" placeholder="给这个计划取个名字，如：爸爸的护膝计划" maxlength="30">
-        <button onclick="saveCurrentPlan()">💾 取名保存</button>
+        <button onclick="saveCurrentPlan()">取名保存</button>
       </div>
     </div>
-    ${plan.warmup && plan.warmup.length ? `<h3 class="section">🔥 热身</h3>` + plan.warmup.map((e, i) => aiCard(e, "热身" + (i + 1))).join("") : ""}
-    <h3 class="section">💪 主训练</h3>
+    ${plan.warmup && plan.warmup.length ? `<h3 class="section">热身</h3>` + plan.warmup.map((e, i) => aiCard(e, "热身" + (i + 1))).join("") : ""}
+    <h3 class="section">主训练</h3>
     ${(plan.main || []).map((e, i) => aiCard(e, i + 1)).join("")}
-    ${plan.cooldown && plan.cooldown.length ? `<h3 class="section">🧘 放松拉伸</h3>` + plan.cooldown.map((e, i) => aiCard(e, "放松" + (i + 1))).join("") : ""}
+    ${plan.cooldown && plan.cooldown.length ? `<h3 class="section">放松拉伸</h3>` + plan.cooldown.map((e, i) => aiCard(e, "放松" + (i + 1))).join("") : ""}
   `;
   document.getElementById("plan").innerHTML = html;
   document.getElementById("plan").scrollIntoView({ behavior: "smooth" });
@@ -263,7 +263,7 @@ async function renderSavedPlans() {
   if (!list.length) { el.innerHTML = ""; return; }
   el.innerHTML = `
     <div class="panel">
-      <h2>📁 我保存的计划（云端同步）</h2>
+      <h2>我保存的计划（云端同步）</h2>
       ${list.map(p => `
         <div class="saved-item">
           <div class="saved-info">

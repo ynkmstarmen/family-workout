@@ -5,69 +5,99 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>家庭锻炼计划工具</title>
 <style>
+:root{
+  --canvas:#f7f1e8;--surface:#fff;--ink:#1c1b1a;--stone:#4a4741;--ash:#838280;--mute:#a8a5a0;
+  --hairline:#e1dcd3;--silver:#cccac7;--primary:#2a72de;--clay:#6b443d;--espresso:#39221e;
+  --gold:#af751b;--ochre:#bc924c;--gold-pale:#ddbe78;--forest:#224228;--olive:#5c6f5d;--sage-pale:#ced4b8;--error:#e33a22;
+  --serif:"Noto Serif SC","Source Han Serif SC","Songti SC","STSong",Georgia,serif;
+  --sans:-apple-system,"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",sans-serif;
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#f4f6fb;color:#1f2937;line-height:1.6}
-.wrap{max-width:860px;margin:0 auto;padding:20px}
+body{font-family:var(--sans);background:var(--canvas);color:var(--ink);line-height:1.6;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto;padding:24px 20px 0}
+h1,h2,.section{font-family:var(--serif);font-weight:400;letter-spacing:0}
+.eyebrow{display:block;font-size:12px;font-weight:700;letter-spacing:2px;color:var(--gold);margin-bottom:10px}
+button{font-family:var(--sans);font-size:16px;font-weight:600;cursor:pointer;border-radius:9999px;transition:background .2s,border-color .2s,color .2s,transform .1s}
+button:active{transform:scale(.98)}
+button:disabled{opacity:.55;cursor:wait}
+input,textarea{font-family:var(--sans);font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:13px 16px;transition:border-color .2s}
+input:focus,textarea:focus{outline:none;border-color:var(--stone)}
+button:focus-visible,.opts label:focus-within{outline:2px solid var(--primary);outline-offset:2px}
 /* 登录 */
-#login{min-height:90vh;display:flex;align-items:center;justify-content:center}
-.login-card{background:#fff;border-radius:16px;padding:40px 32px;box-shadow:0 8px 30px rgba(0,0,0,.08);text-align:center;width:100%;max-width:380px}
-.login-card h1{font-size:24px;margin-bottom:8px}
-.login-card p{color:#6b7280;font-size:14px;margin-bottom:20px}
-.login-card input{width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:10px;font-size:16px;margin-bottom:12px}
-.login-card button{width:100%;padding:12px;background:#2563eb;color:#fff;border:none;border-radius:10px;font-size:16px;cursor:pointer}
-.login-card button:hover{background:#1d4ed8}
-#login-err{color:#dc2626;font-size:13px;min-height:20px;margin-top:8px}
+#login{min-height:92vh;display:flex;align-items:center;justify-content:center}
+.login-card{background:var(--surface);border:1px solid var(--hairline);border-radius:24px;padding:44px 28px 32px;text-align:center;width:100%;max-width:380px}
+.login-card h1{font-size:34px;line-height:1.15;margin-bottom:10px}
+.login-card p{color:var(--ash);font-size:14px;margin-bottom:24px}
+.login-card input{width:100%;margin-bottom:12px;text-align:center}
+.login-card button{width:100%;padding:15px;background:var(--primary);color:#fff;border:none}
+.login-card button:hover{background:#2463c4}
+#login-err{color:var(--error);font-size:13px;min-height:20px;margin-top:10px}
 /* 主体 */
 #app{display:none}
-header{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border-radius:16px;padding:28px;margin-bottom:20px}
-header h1{font-size:22px;margin-bottom:6px}
-header p{opacity:.9;font-size:14px}
-.panel{background:#fff;border-radius:16px;padding:24px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,.05)}
-.panel h2{font-size:17px;margin-bottom:14px}
-.opt-group{margin-bottom:16px}
-.opt-group .label{font-size:14px;color:#6b7280;margin-bottom:8px}
+header{padding:28px 4px 32px;border-bottom:1px solid var(--hairline);margin-bottom:28px}
+header h1{font-size:40px;line-height:1.12;margin-bottom:12px}
+header p{color:var(--stone);font-size:16px;max-width:30em}
+.panel{background:var(--surface);border:1px solid var(--hairline);border-radius:24px;padding:28px 24px;margin-bottom:24px}
+.panel h2{font-size:26px;line-height:1.25;margin-bottom:8px}
+.panel .hint{font-size:14px;color:var(--ash);margin-bottom:16px}
+/* AI 面板：深色咖啡带 */
+.panel-ai{background:var(--espresso);border-color:var(--espresso);color:#f7f1e8}
+.panel-ai .eyebrow{color:var(--gold-pale)}
+.panel-ai .hint{color:#cbbfb2}
+.panel-ai textarea{width:100%;background:#4a302b;border-color:#5e4039;color:#f7f1e8;margin-bottom:14px;resize:vertical}
+.panel-ai textarea::placeholder{color:#a8968a}
+.panel-ai textarea:focus{border-color:var(--gold-pale)}
+#ai-gen{width:100%;padding:16px;background:var(--primary);color:#fff;border:none}
+#ai-gen:hover{background:#2463c4}
+#ai-status{font-size:13px;color:#cbbfb2;margin-top:10px}#ai-status:empty{display:none}
+.opt-group{margin-bottom:22px}
+.opt-group .label{font-size:12px;font-weight:700;letter-spacing:1.5px;color:var(--ash);margin-bottom:10px}
 .opts{display:flex;flex-wrap:wrap;gap:8px}
-.opts label{border:2px solid #e5e7eb;border-radius:999px;padding:8px 16px;font-size:14px;cursor:pointer;transition:.15s}
-.opts input{display:none}
-.opts input:checked+span{font-weight:600}
-.opts label:has(input:checked){border-color:#2563eb;background:#eff6ff;color:#1d4ed8}
-#gen{width:100%;padding:14px;background:#16a34a;color:#fff;border:none;border-radius:12px;font-size:17px;font-weight:600;cursor:pointer;margin-top:6px}
-#gen:hover{background:#15803d}
+.opts label{border:1px solid var(--silver);background:var(--canvas);color:var(--stone);border-radius:9999px;padding:10px 18px;font-size:15px;cursor:pointer;min-height:44px;display:inline-flex;align-items:center;transition:.2s}
+.opts input{position:absolute;opacity:0;width:1px;height:1px}
+.opts label:has(input:checked){border-color:var(--stone);background:var(--stone);color:#fff;font-weight:600}
+#gen{width:100%;padding:16px;background:var(--stone);color:#fff;border:none;margin-top:4px}
+#gen:hover{background:var(--ink)}
 /* 计划 */
-.plan-head{background:#fff;border-radius:16px;padding:24px;margin:20px 0;box-shadow:0 2px 12px rgba(0,0,0,.05)}
-.plan-head h2{margin-bottom:8px}
-.plan-head .tip{background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;font-size:13px;margin:12px 0}
-.plan-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-.plan-actions button{padding:10px 16px;border:2px solid #e5e7eb;background:#fff;border-radius:10px;font-size:14px;cursor:pointer}
-.plan-actions button:hover{border-color:#2563eb}
-.section{margin:24px 0 12px;font-size:18px}
-.card{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
-.card-head{display:flex;gap:16px}
-.card-head img{width:120px;height:120px;object-fit:cover;border-radius:10px;background:#f3f4f6;flex-shrink:0}
-.card-title .idx{display:inline-block;background:#2563eb;color:#fff;font-size:12px;border-radius:6px;padding:2px 8px;margin-bottom:6px}
-.card-title h3{font-size:17px;margin-bottom:4px}
-.card-title .meta{font-size:12px;color:#6b7280;margin-bottom:6px}
-.card-title .dose{font-size:15px;font-weight:600;color:#16a34a}
-.card-title .rest{font-size:13px;color:#6b7280}
-.card details{margin-top:10px;font-size:14px}
-.card summary{cursor:pointer;color:#2563eb;font-size:14px}
-.card ol{margin:8px 0 0 20px;color:#4b5563}
-footer{text-align:center;color:#9ca3af;font-size:12px;padding:30px 0}
-.card{break-inside:avoid;box-shadow:none;border:1px solid #e5e7eb}}
+.plan-head{background:var(--surface);border:1px solid var(--hairline);border-radius:24px;padding:28px 24px;margin:28px 0}
+.plan-head h2{font-size:30px;line-height:1.2;margin-bottom:10px}
+.plan-head p{color:var(--stone)}
+.plan-head .tip{background:#eef0e3;border:none;border-left:3px solid var(--olive);border-radius:4px 12px 12px 4px;padding:14px 16px;font-size:14px;color:var(--forest);margin:16px 0}
+.plan-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.plan-actions button{padding:12px 20px;border:1px solid var(--stone);background:var(--canvas);color:var(--stone);font-size:15px}
+.plan-actions button:hover{background:var(--stone);color:#fff}
+.section{font-size:24px;margin:36px 4px 14px;padding-bottom:10px;border-bottom:1px solid var(--hairline)}
+.card{background:var(--surface);border:1px solid var(--hairline);border-radius:24px;padding:16px;margin-bottom:14px}
+.card-head{display:flex;gap:16px;align-items:flex-start}
+.card-head img{width:124px;height:124px;object-fit:cover;border-radius:16px;background:var(--surface-grey,#ececec);flex-shrink:0}
+.card-title .idx{display:inline-block;font-size:12px;font-weight:700;letter-spacing:1.5px;color:var(--gold);margin-bottom:4px}
+.card-title h3{font-family:var(--serif);font-weight:500;font-size:20px;line-height:1.3;margin-bottom:6px}
+.card-title .meta{font-size:12px;color:var(--ash);margin-bottom:10px}
+.card-title .dose{display:inline-block;font-size:15px;font-weight:600;color:var(--forest);background:#eef0e3;border-radius:9999px;padding:4px 12px}
+.card-title .rest{font-size:13px;color:var(--ash);margin-top:6px}
+.card details{margin-top:14px;padding-top:12px;border-top:1px solid var(--hairline);font-size:14px}
+.card summary{cursor:pointer;color:var(--stone);font-weight:600;font-size:14px;list-style:none;display:flex;align-items:center;gap:6px;min-height:32px}
+.card summary::-webkit-details-marker{display:none}
+.card summary::after{content:"+";font-weight:400;font-size:18px;color:var(--ochre)}
+.card details[open] summary::after{content:"−"}
+.card ol{margin:8px 0 0 20px;color:var(--stone);line-height:1.8}
+footer{text-align:center;color:var(--mute);font-size:12px;padding:40px 0 32px}
 /* 保存计划 */
-.save-row{display:flex;gap:8px;margin-top:12px}
-.save-row input{flex:1;padding:10px 14px;border:2px solid #e5e7eb;border-radius:10px;font-size:14px}
-.save-row button{padding:10px 18px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
-.save-row button:hover{background:#6d28d9}
-.saved-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 4px;border-top:1px solid #f3f4f6}
+.save-row{display:flex;gap:8px;margin-top:16px}
+.save-row input{flex:1;min-width:0;padding:11px 16px;border-radius:9999px;font-size:15px}
+.save-row button{padding:11px 20px;background:var(--stone);color:#fff;border:none;font-size:15px;white-space:nowrap}
+.save-row button:hover{background:var(--ink)}
+.saved-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 2px;border-top:1px solid var(--hairline)}
 .saved-item:first-of-type{border-top:none}
-.saved-name{font-size:15px;font-weight:600}
-.saved-time{font-size:12px;color:#9ca3af;margin-top:2px}
+.saved-name{font-family:var(--serif);font-size:17px;font-weight:500}
+.saved-time{font-size:12px;color:var(--ash);margin-top:2px}
 .saved-btns{display:flex;gap:8px;flex-shrink:0}
-.saved-btns button{padding:8px 14px;border:2px solid #e5e7eb;background:#fff;border-radius:8px;font-size:13px;cursor:pointer}
-.saved-btns button:hover{border-color:#2563eb}
-.saved-btns button.danger:hover{border-color:#dc2626;color:#dc2626}
-@media(max-width:600px){.card-head img{width:96px;height:96px}}
+.saved-btns button{padding:8px 16px;border:1px solid var(--silver);background:var(--canvas);color:var(--stone);font-size:13px}
+.saved-btns button:hover{border-color:var(--stone)}
+.saved-btns button.danger:hover{border-color:var(--error);color:var(--error)}
+@media(max-width:600px){header h1{font-size:34px}.card-head img{width:96px;height:96px;border-radius:12px}.card-title h3{font-size:18px}.panel,.plan-head{padding:24px 20px}}
+@media print{body{background:#fff}.card{break-inside:avoid}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
@@ -76,7 +106,8 @@ footer{text-align:center;color:#9ca3af;font-size:12px;padding:30px 0}
 <!-- 登录 -->
 <div id="login">
   <div class="login-card">
-    <h1>🏋️ 家庭锻炼计划</h1>
+    <span class="eyebrow">FAMILY WORKOUT</span>
+    <h1>家庭锻炼计划</h1>
     <p>请输入访问密码（找分享人要）</p>
     <input type="password" id="pwd" placeholder="密码" autocomplete="off">
     <button onclick="tryLogin()">进入</button>
@@ -87,22 +118,25 @@ footer{text-align:center;color:#9ca3af;font-size:12px;padding:30px 0}
 <!-- 主应用 -->
 <div id="app">
   <header>
-    <h1>🏋️ 家庭锻炼计划工具</h1>
-    <p>选需求 → 自动生成锻炼计划（含动作演示 GIF + 中文步骤），在家就能练</p>
+    <span class="eyebrow">FAMILY WORKOUT · 在家就能练</span>
+    <h1>今天，练一点点</h1>
+    <p>选好需求，自动生成一套锻炼计划，每个动作都有演示动图和中文步骤。</p>
   </header>
 
-  <div class="panel" style="border:2px solid #7c3aed">
-    <h2>🤖 AI 定制计划（大白话描述，联网优选动作）</h2>
-    <p style="font-size:13px;color:#6b7280;margin-bottom:10px">比如：50岁，膝盖不太好，在家练，主要想预防肌肉流失，喜欢静态动作</p>
-    <textarea id="ai-demand" rows="3" style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:10px;font-size:15px;margin-bottom:10px" placeholder="说说你的年龄、身体情况、锻炼目标…"></textarea>
-    <button id="ai-gen" style="width:100%;padding:14px;background:#7c3aed;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer">✨ AI 生成我的计划</button>
-    <div id="ai-status" style="font-size:13px;color:#6b7280;margin-top:8px;min-height:20px"></div>
+  <div class="panel panel-ai">
+    <span class="eyebrow">AI 定制</span>
+    <h2>用大白话说说你的情况</h2>
+    <p class="hint">比如：50岁，膝盖不太好，在家练，主要想预防肌肉流失，喜欢静态动作</p>
+    <textarea id="ai-demand" rows="3" placeholder="说说你的年龄、身体情况、锻炼目标…"></textarea>
+    <button id="ai-gen">生成我的专属计划</button>
+    <div id="ai-status"></div>
   </div>
 
   <div id="saved-plans"></div>
 
   <div class="panel">
-    <h2>📝 说说你的锻炼需求（快速勾选版）</h2>
+    <span class="eyebrow">快速勾选</span>
+    <h2>选几项，马上出计划</h2>
     <div class="opt-group">
       <div class="label">锻炼目标（可多选）</div>
       <div class="opts">
